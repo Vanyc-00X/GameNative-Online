@@ -144,7 +144,8 @@ jobs:
             - **`${{ steps.meta.outputs.apk_name }}`** — standard phone/tablet build (recommended)
 
             ### Notes
-            - Signed with the Android **debug** keystore (fork release; not Play Store / upstream dual-sign).
+            - Signed with the fork’s **stable online debug keystore** (same cert across releases so updates install).
+            - If install fails with “app not installed” / signature error: uninstall any old `app.gamenative` build (upstream or earlier CI) first, then install this APK.
             - Uninstall upstream GameNative first if package id conflicts, or sideload carefully.
             - Online multiplayer is **not** guaranteed for every title — check badges (`ONLINE OK` / `FLAKY` / `BLOCKED`).
             - Anti-cheat titles remain unsupported.

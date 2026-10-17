@@ -57,6 +57,9 @@ kls_database.db
 #Private keystore data
 app/keystores/*
 !app/keystores/.gitkeep
+# Stable public debug key for GameNative Online CI/sideload releases (not Play Store).
+!app/keystores/gamenative-online-debug.jks
+!app/keystores/gamenative-online-debug.properties
 
 # virglrenderer
 *.pyc

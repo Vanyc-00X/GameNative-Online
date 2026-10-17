@@ -20,6 +20,18 @@ val keystoreProperties: Properties? = if (keystorePropertiesFile.exists()) {
     }
 } else null
 
+// Stable fork release key — committed so CI sideload APKs keep the same signature across builds.
+// Without this, each GitHub runner gets a fresh Android debug.keystore and upgrades fail with
+// INSTALL_FAILED_UPDATE_INCOMPATIBLE ("app won't install").
+val onlineDebugKeystorePropertiesFile =
+    rootProject.file("app/keystores/gamenative-online-debug.properties")
+val onlineDebugKeystoreProperties: Properties? =
+    if (onlineDebugKeystorePropertiesFile.exists()) {
+        Properties().apply { load(FileInputStream(onlineDebugKeystorePropertiesFile)) }
+    } else {
+        null
+    }
+
 // Add PostHog API key and host as build-time variables
 val posthogApiKey: String = project.findProperty("POSTHOG_API_KEY") as String? ?: System.getenv("POSTHOG_API_KEY") ?: ""
 val posthogHost: String = project.findProperty("POSTHOG_HOST") as String? ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com"
@@ -53,6 +65,15 @@ android {
                 keyPassword = keystoreProperties["keyPassword"].toString()
             }
         }
+        create("onlineDebug") {
+            if (onlineDebugKeystoreProperties != null) {
+                val storeName = onlineDebugKeystoreProperties["storeFile"].toString()
+                storeFile = rootProject.file("app/keystores/$storeName")
+                storePassword = onlineDebugKeystoreProperties["storePassword"].toString()
+                keyAlias = onlineDebugKeystoreProperties["keyAlias"].toString()
+                keyPassword = onlineDebugKeystoreProperties["keyPassword"].toString()
+            }
+        }
     }
 
     defaultConfig {
@@ -64,7 +85,7 @@ android {
         buildConfigField("boolean", "XR_BUILD", "false")
         buildConfigField("boolean", "MODERN_XR", "false")
 
-        versionCode = 1006
+        versionCode = 1007
         versionName = "0.1.7-online"
 
         buildConfigField("boolean", "GOLD", "false")
@@ -166,12 +187,22 @@ android {
             isDebuggable = true
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (onlineDebugKeystoreProperties != null) {
+                signingConfigs.getByName("onlineDebug")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            // Prefer stable onlineDebug so GitHub Releases stay upgradable; fall back to
+            // Android's local debug keystore only when the committed key is missing.
+            signingConfig = if (onlineDebugKeystoreProperties != null) {
+                signingConfigs.getByName("onlineDebug")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         create("release-signed") {
             isMinifyEnabled = true
